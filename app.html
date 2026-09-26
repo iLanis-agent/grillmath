@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GrillMath - honest propane math</title>
+<style>
+  :root { --bg:#161212; --card:#211917; --ink:#f4ece7; --dim:#b8a399; --acc:#ef8354; --hot:#8fd98a; --cold:#d98a8a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding:28px 24px 8px; max-width:980px; margin:0 auto; display:flex; justify-content:space-between; align-items:baseline; }
+  h1 { margin:0; font-size:28px; }
+  h1 span { color:var(--acc); }
+  nav a { color:var(--dim); text-decoration:none; font-size:14px; }
+  main { max-width:980px; margin:0 auto; padding:16px 24px 60px; display:grid; gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:20px; }
+  .card h2 { margin:0 0 12px; font-size:13px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:4px; }
+  input, select { width:100%; background:#171210; border:1px solid #4a352b; color:var(--ink); border-radius:8px; padding:9px 10px; font-size:15px; }
+  .hint { font-size:12.5px; color:var(--dim); margin-top:10px; }
+  button { cursor:pointer; border:0; border-radius:9px; padding:11px 16px; font-size:15px; background:var(--acc); color:#2a130a; font-weight:600; }
+  button.ghost { background:#382a22; color:var(--ink); font-weight:500; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .verdict { font-size:17px; line-height:1.65; }
+  .verdict b { color:var(--acc); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:16px; }
+  .stat { background:#171210; border-radius:10px; padding:12px; }
+  .stat .v { font-size:19px; font-weight:700; color:var(--acc); }
+  .stat .k { font-size:12px; color:var(--dim); margin-top:2px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12.5px; font-weight:600; margin-left:8px; }
+  .b-loaded { background:#1d3320; color:var(--hot); }
+  .b-few-cooks { background:#3a3016; color:var(--acc); }
+  .b-one-cook, .b-empty { background:#3a1d1d; color:var(--cold); }
+  .note { margin-top:14px; font-size:13.5px; color:var(--dim); }
+  .note b { color:var(--acc); font-weight:600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Grill<span>Math</span></h1>
+  <nav><a href="index.html">home</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>The weigh-in</h2>
+    <div class="grid">
+      <div><label>Tank on a bathroom scale (lb)</label><input id="scale" type="number" step="0.1" value="25"></div>
+      <div><label>Tare weight - TW on the collar (lb)</label><input id="tare" type="number" step="0.1" value="17"></div>
+      <div><label>Grill rating (BTU/hr, all burners)</label><input id="btu" type="number" step="1000" value="30000"></div>
+      <div><label>How you actually grill</label><select id="throttle">
+        <option value="0.5">gentle - half throttle</option>
+        <option value="0.6" selected>typical - about 60%</option>
+        <option value="0.85">everything blazing</option>
+      </select></div>
+      <div><label>Typical cook length</label><select id="session">
+        <option value="0.5">30 min - weeknight burgers</option>
+        <option value="0.75" selected>45 min - a proper dinner</option>
+        <option value="1.5">90 min - slow ribs session</option>
+      </select></div>
+    </div>
+    <p class="hint">The tare weight is stamped "TW" on the tank's collar - the empty shell. Everything above it is propane. A full 20 lb tank reads about 37 lb on the scale.</p>
+  </section>
+
+  <section class="card">
+    <h2>Exchange or refill</h2>
+    <div class="grid">
+      <div><label>Exchange cage price ($)</label><input id="exchPrice" type="number" step="0.5" value="22"></div>
+      <div><label>Refill station price ($)</label><input id="refillPrice" type="number" step="0.5" value="18"></div>
+    </div>
+    <p class="hint">Exchange cages quietly fill to 15 lb, not 20 - the "20 pound tank" you swapped in came back lighter. A refill station tops you to a full 20 lb by the gallon.</p>
+    <div class="row">
+      <button id="run">Count my cooks honestly</button>
+      <button class="ghost" data-preset="weekend">weekend test: half a tank</button>
+      <button class="ghost" data-preset="guests">guests in 2 hours, light tank</button>
+      <button class="ghost" data-preset="season">fresh exchange tank</button>
+    </div>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <h2>The verdict</h2>
+    <p class="verdict" id="verdictText"></p>
+    <div class="stats" id="stats"></div>
+    <p class="note" id="advice"></p>
+  </section>
+
+  <section class="card">
+    <h2>Why the gauge reads "full" until it reads "dead"</h2>
+    <p class="note">Propane is a liquid under pressure, and its vapor pressure stays flat until the liquid is nearly gone - so a pressure gauge says <b>full, full, full, empty</b>. Weight is the only honest number, and the tare weight stamped on the collar is the key. The second lie is the exchange cage: the tanks come back filled to <b>15 lb of the 20 lb you think you bought</b> - a 25% short, priced at the full-tank anchor. Refill stations charge by the gallon and top you to full, which is why the refill is almost always the better deal even when the sticker prices look close.</p>
+  </section>
+</main>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var PRESETS = {
+    weekend: { scale: 27, tare: 17, btu: 30000, throttle: '0.6', session: '0.75', exchPrice: 22, refillPrice: 18 },
+    guests: { scale: 19.5, tare: 17, btu: 36000, throttle: '0.85', session: '1.5', exchPrice: 22, refillPrice: 18 },
+    season: { scale: 32, tare: 17, btu: 30000, throttle: '0.6', session: '0.75', exchPrice: 22, refillPrice: 18 }
+  };
+  document.querySelectorAll('[data-preset]').forEach(function (b) {
+    b.onclick = function () {
+      var p = PRESETS[b.dataset.preset];
+      Object.keys(p).forEach(function (k) { $(k).value = p[k]; });
+      run();
+    };
+  });
+
+  function run() {
+    var scale = +$('scale').value || 0;
+    var tare = +$('tare').value || 0;
+    var btu = +$('btu').value || 0;
+    var throttle = +$('throttle').value;
+    var session = +$('session').value;
+    var lb = GrillMath.propaneLeft(scale, tare);
+    var hours = GrillMath.burnHours(lb, btu, throttle);
+    var cooks = GrillMath.cooksLeft(lb, btu, throttle, session);
+    var v = GrillMath.tankVerdict(lb);
+    var et = GrillMath.exchangeTruth(+$('exchPrice').value || 0, +$('refillPrice').value || 0);
+
+    var text = 'The scale says <b>' + GrillMath.fmtLb(lb) + ' of propane</b> in the tank. On your grill that is <b>' +
+      hours + ' hours of flame</b> - about <b>' + cooks + ' cook' + (cooks === 1 ? '' : 's') + '</b> the way you run it. ';
+    if (v.code === 'one-cook' || v.code === 'empty') text += 'Do not start a long cook on this.';
+    else if (v.code === 'few-cooks') text += 'Enough for now, not enough to stop thinking about it.';
+    else text += 'Grill without anxiety.';
+
+    $('verdictText').innerHTML = text + ' <span class="badge b-' + v.code + '">' + v.label + '</span>';
+
+    var stats = [
+      { v: GrillMath.fmtLb(lb), k: 'propane in the tank' },
+      { v: hours + ' h', k: 'of flame at your throttle' },
+      { v: cooks, k: 'cooks remaining' },
+      { v: '$' + et.perLbExchange, k: 'exchange cage, per lb (15 lb fill)' },
+      { v: '$' + et.perLbRefill, k: 'refill station, per lb (20 lb fill)' },
+      { v: et.exchangePremiumPct + '%', k: 'exchange premium per pound' }
+    ];
+    $('stats').innerHTML = stats.map(function (x) {
+      return '<div class="stat"><div class="v">' + x.v + '</div><div class="k">' + x.k + '</div></div>';
+    }).join('');
+
+    var advice;
+    if (lb <= 2.5) {
+      advice = 'The hot-water trick confirms it: pour warm water down the tank side and run a hand down - the metal turns cold at the propane line. But you already have the better number: the scale.';
+    } else if (et.exchangePremiumPct > 25) {
+      advice = 'Refill wins by <b>' + et.exchangePremiumPct + '% per pound</b> - the cage sells you 15 lb at the 20 lb anchor price. The cage is for emergencies and expired tanks, not routine.';
+    } else {
+      advice = GrillMath.gaugeTruth();
+    }
+    $('advice').innerHTML = advice;
+
+    $('result').hidden = false;
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('run').onclick = run;
+})();
+</script>
+</body>
+</html>
