@@ -26,6 +26,14 @@
     return Math.floor(burnHours(lb, grillBtu, throttle) / sessionHours);
   }
 
+  // Verdict by cooks remaining - the honest band, since a pound feeds a 36k grill half as long as a 30k.
+  function cooksVerdict(cooks) {
+    if (cooks <= 0) return { code: 'empty', label: 'Effectively empty' };
+    if (cooks === 1) return { code: 'one-cook', label: 'One cook, maybe - bring a backup plan' };
+    if (cooks <= 4) return { code: 'few-cooks', label: 'A few cooks left' };
+    return { code: 'loaded', label: 'Well stocked' };
+  }
+
   // Gauge-free estimation without a scale: the hot-water strip test is binary; this is the math version.
   function tankVerdict(lb) {
     if (lb <= 0.5) return { code: 'empty', label: 'Effectively empty' };
@@ -61,6 +69,7 @@
     propaneLeft: propaneLeft,
     burnHours: burnHours,
     cooksLeft: cooksLeft,
+    cooksVerdict: cooksVerdict,
     tankVerdict: tankVerdict,
     exchangeTruth: exchangeTruth,
     gaugeTruth: gaugeTruth,
