@@ -116,7 +116,7 @@
     var lb = GrillMath.propaneLeft(scale, tare);
     var hours = GrillMath.burnHours(lb, btu, throttle);
     var cooks = GrillMath.cooksLeft(lb, btu, throttle, session);
-    var v = GrillMath.tankVerdict(lb);
+    var v = GrillMath.cooksVerdict(cooks);
     var et = GrillMath.exchangeTruth(+$('exchPrice').value || 0, +$('refillPrice').value || 0);
 
     var text = 'The scale says <b>' + GrillMath.fmtLb(lb) + ' of propane</b> in the tank. On your grill that is <b>' +
